@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CH Coin Miner - Dashboard</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        :root {
+            --primary: #00ff88;
+            --primary-dark: #00cc6a;
+            --secondary: #7b61ff;
+            --dark-bg: #0a0e17;
+            --dark-card: #141a2d;
+            --darker-card: #0f1423;
+            --text: #ffffff;
+            --text-secondary: #a0aec0;
+            --danger: #ff4757;
+            --warning: #ffa502;
+        }
+
+        body {
+            background: var(--dark-bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 255, 136, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(123, 97, 255, 0.05) 0%, transparent 20%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+        }
+
+        .logout-btn {
+            background: rgba(255, 71, 87, 0.1);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .logout-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Main Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: var(--dark-card);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Balance Card */
+        .balance-amount {
+            font-size: 48px;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .balance-details {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-item h4 {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        /* Mining Card */
+        .mining-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--danger);
+            animation: blink 2s infinite;
+        }
+
+        .status-dot.active {
+            background: var(--primary);
+            animation: none;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .countdown {
+            font-size: 32px;
+            font-weight: bold;
+            font-family: monospace;
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: var(--darker-card);
+            border-radius: 15px;
+            letter-spacing: 2px;
+        }
+
+        .mining-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--dark-bg);
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mining-btn:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .mining-btn:hover:not(:disabled) {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        /* Transfer Card */
+        .transfer-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .input-group input {
+            padding: 15px;
+            background: var(--darker-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 16px;
+        }
+
+        .transfer-btn {
+            padding: 16px;
+            background: linear-gradient(135deg, var(--secondary), #6a4dff);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .transfer-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(123, 97, 255, 0.3);
+        }
+
+        .transfer-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Wallets Section */
+        .wallets-section {
+            background: var(--darker-card);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .wallets-section h2 {
+            margin-bottom: 25px;
+            color: var(--text);
+            font-size: 24px;
+        }
+
+        .wallets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .wallet-item {
+            background: var(--dark-card);
+            padding: 20px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s;
+        }
+
+        .wallet-item:hover {
+            transform: translateY(-3px);
+            background: var(--dark-bg);
+        }
+
+        .wallet-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: var(--dark-card);
+            border-left: 4px solid var(--primary);
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            transform: translateX(150%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            border-left-color: var(--danger);
+        }
+
+        .notification.warning {
+            border-left-color: var(--warning);
+        }
+
+        /* Login Page */
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .login-card {
+            background: var(--dark-card);
+            padding: 50px 40px;
+            border-radius: 25px;
+            max-width: 400px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .login-title {
+            font-size: 32px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .login-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+            padding: 18px;
+            background: white;
+            color: #333;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .google-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .google-btn img {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Support Button */
+        .support-section {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .support-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #0088cc, #00aaff);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .support-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0, 136, 204, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .balance-amount {
+                font-size: 36px;
+            }
+            
+            .countdown {
+                font-size: 24px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .suspended {
+            color: var(--danger);
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 71, 87, 0.1);
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <div class="logo" style="justify-content: center; margin-bottom: 30px;">
+                <div class="logo-icon">CH</div>
+                <h1 style="font-size: 32px;">CH Coin Miner</h1>
+            </div>
+            <h2 class="login-title">Start Mining</h2>
+            <p class="login-subtitle">Mine CH Coin with Google authentication. Join thousands of miners worldwide in our simulated mining network.</p>
+            <button id="googleLoginBtn" class="google-btn">
+                <img src="https://www.google.com/favicon.ico" alt="Google">
+                Sign in with Google
+            </button>
+            <div style="margin-top: 40px; color: var(--text-secondary); font-size: 14px;">
+                <p>CH Coin will be officially listed in 2029</p>
+                <p style="margin-top: 10px; opacity: 0.7;">This is a simulated mining experience for educational purposes</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="container hidden">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">CH</div>
+                <div>
+                    <h1>CH Coin Miner</h1>
+                    <p style="color: var(--text-secondary); font-size: 14px;">Mining Simulator Dashboard</p>
+                </div>
+            </div>
+            <div class="user-info">
+                <img id="userAvatar" class="user-avatar" src="" alt="User Avatar">
+                <div>
+                    <h3 id="userName"></h3>
+                    <p id="userEmail" style="color: var(--text-secondary); font-size: 14px;"></p>
+                </div>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
+            </div>
+        </div>
+
+        <!-- Notification -->
+        <div id="notification" class="notification">
+            <p id="notificationText"></p>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Balance Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>💰</span> WALLET BALANCE
+                </div>
+                <div class="balance-amount" id="balanceAmount">0 CH</div>
+                <div style="color: var(--text-secondary); margin-bottom: 10px;">≈ $<span id="balanceUSD">0.00</span> USD</div>
+                
+                <div class="balance-details">
+                    <div class="detail-item">
+                        <h4>COIN PRICE</h4>
+                        <p style="color: var(--primary); font-weight: bold;">$0.02</p>
+                    </div>
+                    <div class="detail-item">
+                        <h4>DAILY EARNINGS</h4>
+                        <p style="color: var(--primary); font-weight: bold;">$6.00</p>
+                    </div>
+                    <div class="detail-item">
+                        <h4>MINING REWARD</h4>
+                        <p style="color: var(--primary); font-weight: bold;">300 CH</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mining Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>⛏️</span> MINING CONTROL
+                </div>
+                
+                <div class="mining-status">
+                    <div class="status-indicator">
+                        <div id="statusDot" class="status-dot"></div>
+                        <span id="statusText">MINING INACTIVE</span>
+                    </div>
+                </div>
+
+                <div id="countdown" class="countdown">
+                    00:00:00
+                </div>
+
+                <button id="miningBtn" class="mining-btn">
+                    START MINING
+                </button>
+
+                <div id="suspendedMessage" class="suspended hidden">
+                    ⚠️ Account suspended. Mining is disabled.
+                </div>
+
+                <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <p style="color: var(--text-secondary); font-size: 14px; text-align: center;">
+                        Each mining session lasts 24 hours and rewards 300 CH Coin
+                    </p>
+                </div>
+            </div>
+
+            <!-- Transfer Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>🔄</span> TRANSFER COINS
+                </div>
+                
+                <form id="transferForm" class="transfer-form">
+                    <div class="input-group">
+                        <label for="receiverUID">Receiver UID</label>
+                        <input type="text" id="receiverUID" placeholder="Enter user UID" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="transferAmount">Amount (Minimum: 10 CH)</label>
+                        <input type="number" id="transferAmount" min="10" step="1" placeholder="Enter amount" required>
+                    </div>
+
+                    <button type="submit" id="transferBtn" class="transfer-btn">
+                        SEND CH COINS
+                    </button>
+                </form>
+
+                <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <p style="color: var(--text-secondary); font-size: 14px;">
+                        Transfer fee: 0 CH<br>
+                        Network: CH Mainnet<br>
+                        Minimum: 10 CH Coin
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wallets Section -->
+        <div class="wallets-section">
+            <h2>Coming Soon to Wallets</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 30px;">CH Coin will be available in major wallets after 2029 listing</p>
+            
+            <div class="wallets-grid">
+                <div class="wallet-item">
+                    <div class="wallet-icon">🟣</div>
+                    <div>
+                        <h3>Trust Wallet</h3>
+                        <p style="color: var(--text-secondary); font-size: 14px;">Multi-chain wallet</p>
+                    </div>
+                </div>
+                <div class="wallet-item">
+                    <div class="wallet-icon">🟡</div>
+                    <div>
+                        <h3>Binance</h3>
+                        <p style="color: var(--text-secondary); font-size: 14px;">Exchange wallet</p>
+                    </div>
+                </div>
+                <div class="wallet-item">
+                    <div class="wallet-icon">🔵</div>
+                    <div>
+                        <h3>Phantom</h3>
+                        <p style="color: var(--text-secondary); font-size: 14px;">Solana wallet</p>
+                    </div>
+                </div>
+                <div class="wallet-item">
+                    <div class="wallet-icon">🟢</div>
+                    <div>
+                        <h3>Exodus</h3>
+                        <p style="color: var(--text-secondary); font-size: 14px;">Desktop & mobile</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; color: var(--text-secondary); font-size: 14px; margin-top: 20px;">
+                <p>CH Coin will be listed in 2029 on major exchanges</p>
+                <p style="margin-top: 5px;">Current simulated price: $0.02 per CH Coin</p>
+            </div>
+        </div>
+
+        <!-- Support Section -->
+        <div class="support-section">
+            <p style="color: var(--text-secondary); margin-bottom: 10px;">Need help or have questions?</p>
+            <a href="https://t.me/CryptoMinerApp10" target="_blank" class="support-btn">
+                <span>💬</span> Join Support Telegram
+            </a>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 30px;">
+                © 2024 CH Coin Miner. This is a simulated mining experience.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDQ-Nt2deuIyuzmxcirAvvLEuNhItMY8ZY",
+            authDomain: "ch-coin-miner.firebaseapp.com",
+            projectId: "ch-coin-miner",
+            storageBucket: "ch-coin-miner.firebasestorage.app",
+            messagingSenderId: "486232790384",
+            appId: "1:486232790384:web:5de088c3c8d2050da82bb5"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+        // DOM Elements
+        const loginPage = document.getElementById('loginPage');
+        const dashboard = document.getElementById('dashboard');
+        const googleLoginBtn = document.getElementById('googleLoginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userName = document.getElementById('userName');
+        const userEmail = document.getElementById('userEmail');
+        const userAvatar = document.getElementById('userAvatar');
+        const balanceAmount = document.getElementById('balanceAmount');
+        const balanceUSD = document.getElementById('balanceUSD');
+        const miningBtn = document.getElementById('miningBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const countdown = document.getElementById('countdown');
+        const transferForm = document.getElementById('transferForm');
+        const receiverUID = document.getElementById('receiverUID');
+        const transferAmount = document.getElementById('transferAmount');
+        const transferBtn = document.getElementById('transferBtn');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+        const suspendedMessage = document.getElementById('suspendedMessage');
+
+        // Global Variables
+        let currentUser = null;
+        let userData = null;
+        let countdownInterval = null;
+        const COIN_PRICE = 0.02;
+
+        // Notification System
+        function showNotification(message, type = 'info') {
+            notificationText.textContent = message;
+            notification.className = 'notification';
+            notification.classList.add('show', type);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Format Currency
+        function formatCurrency(amount) {
+            return amount.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Format Time
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Calculate USD Value
+        function calculateUSD(coins) {
+            return formatCurrency(coins * COIN_PRICE);
+        }
+
+        // Create User Data Structure
+        function createUserData(user) {
+            return {
+                email: user.email,
+                name: user.displayName,
+                balance: 1000, // Starting balance
+                miningEnd: 0,
+                miningActive: false,
+                suspendedUntil: 0,
+                createdAt: Date.now()
+            };
+        }
+
+        // Update UI with User Data
+        function updateUI() {
+            if (!userData) return;
+
+            // User Info
+            userName.textContent = userData.name;
+            userEmail.textContent = userData.email;
+            userAvatar.src = currentUser.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userData.name);
+
+            // Balance
+            balanceAmount.textContent = `${formatCurrency(userData.balance)} CH`;
+            balanceUSD.textContent = calculateUSD(userData.balance);
+
+            // Mining Status
+            const now = Date.now();
+            const isSuspended = userData.suspendedUntil > now;
+            
+            if (isSuspended) {
+                suspendedMessage.classList.remove('hidden');
+                miningBtn.disabled = true;
+                statusDot.classList.remove('active');
+                statusText.textContent = 'ACCOUNT SUSPENDED';
+                countdown.textContent = '00:00:00';
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+            } else if (userData.miningActive && userData.miningEnd > now) {
+                // Mining active
+                suspendedMessage.classList.add('hidden');
+                miningBtn.disabled = true;
+                statusDot.classList.add('active');
+                statusText.textContent = 'MINING ACTIVE';
+                updateCountdown();
+                if (!countdownInterval) {
+                    countdownInterval = setInterval(updateCountdown, 1000);
+                }
+            } else if (userData.miningActive && userData.miningEnd <= now) {
+                // Mining finished
+                completeMining();
+            } else {
+                // Mining inactive
+                suspendedMessage.classList.add('hidden');
+                miningBtn.disabled = false;
+                statusDot.classList.remove('active');
+                statusText.textContent = 'MINING INACTIVE';
+                countdown.textContent = '00:00:00';
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+            }
+        }
+
+        // Update Countdown Timer
+        function updateCountdown() {
+            if (!userData || !userData.miningActive) return;
+            
+            const now = Date.now();
+            const remaining = Math.max(0, Math.floor((userData.miningEnd - now) / 1000));
+            
+            if (remaining <= 0) {
+                completeMining();
+                return;
+            }
+            
+            countdown.textContent = formatTime(remaining);
+        }
+
+        // Complete Mining Session
+        function completeMining() {
+            if (!userData || !userData.miningActive) return;
+            
+            const newBalance = userData.balance + 300;
+            
+            // Update database
+            database.ref(`users/${currentUser.uid}`).update({
+                balance: newBalance,
+                miningActive: false,
+                miningEnd: 0
+            }).then(() => {
+                userData.balance = newBalance;
+                userData.miningActive = false;
+                userData.miningEnd = 0;
+                updateUI();
+                showNotification('🎉 Mining completed! 300 CH Coin added to your balance.', 'info');
+            }).catch(error => {
+                console.error('Error completing mining:', error);
+                showNotification('Error completing mining session', 'error');
+            });
+        }
+
+        // Start Mining
+        function startMining() {
+            if (!currentUser || !userData) return;
+            
+            if (userData.miningActive) {
+                showNotification('Mining already in progress', 'warning');
+                return;
+            }
+
+            const now = Date.now();
+            const miningEnd = now + (24 * 60 * 60 * 1000); // 24 hours from now
+            
+            database.ref(`users/${currentUser.uid}`).update({
+                miningActive: true,
+                miningEnd: miningEnd
+            }).then(() => {
+                userData.miningActive = true;
+                userData.miningEnd = miningEnd;
+                updateUI();
+                showNotification('⛏️ Mining started! Session will complete in 24 hours.', 'info');
+            }).catch(error => {
+                console.error('Error starting mining:', error);
+                showNotification('Error starting mining session', 'error');
+            });
+        }
+
+        // Transfer Coins
+        function transferCoins(e) {
+            e.preventDefault();
+            
+            const receiver = receiverUID.value.trim();
+            const amount = parseInt(transferAmount.value);
+            
+            if (!receiver) {
+                showNotification('Please enter receiver UID', 'error');
+                return;
+            }
+            
+            if (isNaN(amount) || amount < 10) {
+                showNotification('Minimum transfer amount is 10 CH Coin', 'error');
+                return;
+            }
+            
+            if (amount > userData.balance) {
+                showNotification('Insufficient balance', 'error');
+                return;
+            }
+            
+            if (receiver === currentUser.uid) {
+                showNotification('Cannot transfer to yourself', 'error');
+                return;
+            }
+            
+            transferBtn.disabled = true;
+            
+            // Check if receiver exists
+            database.ref(`users/${receiver}`).once('value').then(snapshot => {
+                if (!snapshot.exists()) {
+                    throw new Error('Receiver not found');
+                }
+                
+                const receiverData = snapshot.val();
+                
+                // Perform transfer
+                const updates = {};
+                updates[`users/${currentUser.uid}/balance`] = userData.balance - amount;
+                updates[`users/${receiver}/balance`] = receiverData.balance + amount;
+                
+                // Save transfer history
+                const transferId = Date.now().toString();
+                updates[`transfers/${transferId}`] = {
+                    sender: currentUser.uid,
+                    receiver: receiver,
+                    amount: amount,
+                    timestamp: Date.now()
+                };
+                
+                return database.ref().update(updates);
+            }).then(() => {
+                // Update local data
+                userData.balance -= amount;
+                updateUI();
+                
+                // Reset form
+                receiverUID.value = '';
+                transferAmount.value = '';
+                
+                showNotification(`✅ Successfully transferred ${amount} CH Coin`, 'info');
+            }).catch(error => {
+                console.error('Transfer error:', error);
+                showNotification(error.message || 'Transfer failed', 'error');
+            }).finally(() => {
+                transferBtn.disabled = false;
+            });
+        }
+
+        // Auth State Observer
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                
+                // Check if user exists in database
+                const userRef = database.ref(`users/${user.uid}`);
+                const snapshot = await userRef.once('value');
+                
+                if (!snapshot.exists()) {
+                    // Create new user
+                    userData = createUserData(user);
+                    await userRef.set(userData);
+                } else {
+                    userData = snapshot.val();
+                }
+                
+                // Start listening for user data changes
+                userRef.on('value', (snap) => {
+                    userData = snap.val();
+                    updateUI();
+                });
+                
+                // Switch to dashboard
+                loginPage.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+                updateUI();
+            } else {
+                // Switch to login page
+                loginPage.classList.remove('hidden');
+                dashboard.classList.add('hidden');
+                currentUser = null;
+                userData = null;
+                
+                // Clean up intervals
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+            }
+        });
+
+        // Event Listeners
+        googleLoginBtn.addEventListener('click', () => {
+            auth.signInWithPopup(googleProvider).catch(error => {
+                console.error('Login error:', error);
+                showNotification('Login failed: ' + error.message, 'error');
+            });
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut().catch(error => {
+                console.error('Logout error:', error);
+                showNotification('Logout failed', 'error');
+            });
+        });
+
+        miningBtn.addEventListener('click', startMining);
+        transferForm.addEventListener('submit', transferCoins);
+
+        // Initialize
+        console.log('CH Coin Miner initialized');
+    </script>
+</body>
+</html>
